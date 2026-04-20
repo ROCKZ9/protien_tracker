@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProTrack — AI Protein Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #18181f;
+    --card: #1c1c25;
+    --card2: #22222d;
+    --border: #2a2a38;
+    --accent: #00e5a0;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --accent4: #ef4444;
+    --text: #f0f0f8;
+    --text2: #9090a8;
+    --text3: #5a5a70;
+    --glow: rgba(0,229,160,0.15);
+    --glow2: rgba(124,58,237,0.15);
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated bg grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app-wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+    animation: fadeDown 0.6s ease;
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+
+  .logo-sub {
+    font-size: 0.72rem;
+    color: var(--text3);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .date-badge {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text2);
+  }
+
+  .weight-btn {
+    background: var(--card);
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .weight-btn:hover {
+    background: var(--accent2);
+    color: white;
+    box-shadow: 0 0 20px rgba(124,58,237,0.4);
+    transform: translateY(-1px);
+  }
+
+  /* ---- GOAL BAR ---- */
+  .goal-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.5s ease 0.1s both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .goal-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  }
+
+  .goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .goal-title {
+    font-size: 0.78rem;
+    color: var(--text3);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .goal-nums {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text2);
+  }
+
+  .goal-nums span {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .progress-track {
+    background: var(--bg);
+    border-radius: 100px;
+    height: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    box-shadow: 0 0 12px var(--glow);
+  }
+
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 8px;
+    background: white;
+    border-radius: 100px;
+    opacity: 0.6;
+    animation: pulse 1.5s ease infinite;
+  }
+
+  .goal-stats {
+    display: flex;
+    gap: 24px;
+    margin-top: 14px;
+  }
+
+  .goal-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .goal-stat-val {
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .goal-stat-val.green { color: var(--accent); }
+  .goal-stat-val.purple { color: var(--accent2); }
+  .goal-stat-val.amber { color: var(--accent3); }
+
+  .goal-stat-label {
+    font-size: 0.7rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ---- SCORE RING ---- */
+  .score-ring-wrap {
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .score-ring-wrap svg { display: block; }
+
+  .score-text {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    fill: var(--text);
+    dominant-baseline: middle;
+    text-anchor: middle;
+  }
+
+  .score-sub {
+    font-size: 0.55rem;
+    fill: var(--text3);
+    dominant-baseline: middle;
+    text-anchor: middle;
+    letter-spacing: 1px;
+  }
+
+  /* ---- MAIN GRID ---- */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.5s ease 0.2s both;
+  }
+
+  /* ---- FOOD INPUT CARD ---- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .card-title {
+    font-size: 0.72rem;
+    color: var(--text3);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .food-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .food-input {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .food-input::placeholder { color: var(--text3); }
+
+  .food-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+  }
+
+  .qty-input {
+    width: 90px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 12px;
+    border-radius: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+  }
+  .qty-input:focus { border-color: var(--accent2); }
+  .qty-input::placeholder { color: var(--text3); }
+
+  .add-btn {
+    background: linear-gradient(135deg, var(--accent), #00c47a);
+    color: #000;
+    border: none;
+    padding: 12px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.88rem;
+    transition: all 0.25s;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .add-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transform: translate(-50%,-50%);
+    transition: width 0.4s, height 0.4s, opacity 0.4s;
+    opacity: 0;
+  }
+
+  .add-btn:active::after {
+    width: 200px; height: 200px; opacity: 0;
+  }
+
+  .add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,229,160,0.35);
+  }
+
+  .add-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .ai-status {
+    font-size: 0.75rem;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 20px;
+    margin-bottom: 12px;
+    font-family: var(--font-mono);
+  }
+
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .spinner.active { display: block; }
+
+  /* ---- FOOD LOG LIST ---- */
+  .food-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .food-list::-webkit-scrollbar { width: 4px; }
+  .food-list::-webkit-scrollbar-track { background: transparent; }
+  .food-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .food-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.3s ease;
+    transition: border-color 0.2s;
+  }
+
+  .food-item:hover { border-color: var(--accent); }
+
+  .food-item-icon {
+    width: 32px; height: 32px;
+    background: var(--card2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .food-item-info { flex: 1; }
+
+  .food-item-name {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text);
+    text-transform: capitalize;
+  }
+
+  .food-item-detail {
+    font-size: 0.72rem;
+    color: var(--text3);
+    font-family: var(--font-mono);
+  }
+
+  .food-item-protein {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .food-item-del {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+  }
+
+  .food-item-del:hover { color: var(--accent4); }
+
+  .empty-log {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+    font-size: 0.85rem;
+  }
+
+  .empty-log-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    opacity: 0.3;
+  }
+
+  /* ---- SIDE PANEL ---- */
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ---- PIE CHART ---- */
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .chart-canvas-wrap {
+    position: relative;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---- END OF DAY BUTTON ---- */
+  .eod-btn {
+    background: linear-gradient(135deg, var(--accent2), #9f5ff0);
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9rem;
+    width: 100%;
+    transition: all 0.3s;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .eod-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .eod-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(124,58,237,0.4);
+  }
+
+  .eod-btn:hover::before { opacity: 1; }
+
+  /* ---- BAR CHART SECTION ---- */
+  .history-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    animation: fadeUp 0.5s ease 0.3s both;
+  }
+
+  .history-chart-wrap {
+    height: 200px;
+    margin-top: 16px;
+  }
+
+  /* ---- MODAL ---- */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
+    max-width: 480px;
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.3s;
+    position: relative;
+  }
+
+  .modal-overlay.active .modal {
+    transform: translateY(0) scale(1);
+  }
+
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .modal-sub {
+    font-size: 0.82rem;
+    color: var(--text3);
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .modal-input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    outline: none;
+    margin-bottom: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .modal-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
+  }
+
+  .modal-save-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), #00c47a);
+    color: #000;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.25s;
+    font-family: var(--font-body);
+    letter-spacing: 0.5px;
+  }
+
+  .modal-save-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,229,160,0.3);
+  }
+
+  /* ---- EOD REPORT MODAL ---- */
+  .report-modal {
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .report-modal::-webkit-scrollbar { width: 4px; }
+  .report-modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .score-display {
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  .score-big {
+    font-family: var(--font-display);
+    font-size: 6rem;
+    line-height: 1;
+    letter-spacing: 4px;
+  }
+
+  .score-big.excellent { color: var(--accent); text-shadow: 0 0 30px rgba(0,229,160,0.4); }
+  .score-big.good { color: var(--accent3); text-shadow: 0 0 30px rgba(245,158,11,0.4); }
+  .score-big.poor { color: var(--accent4); text-shadow: 0 0 30px rgba(239,68,68,0.4); }
+
+  .score-grade {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  .report-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .metric-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .metric-val {
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .metric-label {
+    font-size: 0.68rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .report-pie-wrap {
+    height: 200px;
+    margin: 16px 0;
+  }
+
+  .report-food-list {
+    margin: 16px 0;
+  }
+
+  .report-food-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+
+  .report-food-row:last-child { border-bottom: none; }
+
+  .ai-insight {
+    background: linear-gradient(135deg, rgba(0,229,160,0.05), rgba(124,58,237,0.05));
+    border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--text2);
+  }
+
+  .ai-insight-title {
+    font-size: 0.68rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .close-report-btn {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .close-report-btn:hover {
+    border-color: var(--text2);
+    color: var(--text);
+  }
+
+  /* ---- API KEY MODAL ---- */
+  .api-key-notice {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.78rem;
+    color: var(--accent3);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  /* ---- TOAST ---- */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 0.82rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: slideToast 0.3s ease;
+  }
+
+  .toast.success { border-color: rgba(0,229,160,0.4); }
+  .toast.error { border-color: rgba(239,68,68,0.4); }
+
+  /* ---- QUICK PRESETS ---- */
+  .quick-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .preset-chip {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 5px 12px;
+    border-radius: 100px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+    font-family: var(--font-body);
+  }
+
+  .preset-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,229,160,0.05);
+  }
+
+  /* ---- ANIMATIONS ---- */
+  @keyframes fadeDown {
+    from { opacity:0; transform: translateY(-16px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(16px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { opacity:0; transform: translateX(-12px); }
+    to { opacity:1; transform: translateX(0); }
+  }
+
+  @keyframes slideToast {
+    from { opacity:0; transform: translateX(20px); }
+    to { opacity:1; transform: translateX(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.2; }
+  }
+
+  @keyframes scoreReveal {
+    from { opacity:0; transform: scale(0.5); }
+    to { opacity:1; transform: scale(1); }
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 768px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .score-ring-wrap { display: none; }
+    .report-metrics { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-text">PROTRACK</div>
+      <div class="logo-sub">AI-Powered Protein Tracker</div>
+    </div>
+    <div class="header-right">
+      <div class="date-badge" id="dateBadge"></div>
+      <button class="weight-btn" onclick="openWeightModal()">
+        ⚖️ <span id="weightBtnText">Set Weight</span>
+      </button>
+      <button class="weight-btn" style="border-color:var(--accent3); color:var(--accent3);" onclick="openApiKeyModal()">
+        🔑 API Key
+      </button>
+    </div>
+  </header>
+
+  <!-- GOAL PROGRESS -->
+  <div class="goal-section" id="goalSection">
+    <div class="goal-header">
+      <div class="goal-title">Today's Protein Goal</div>
+      <div class="goal-nums">
+        <span id="totalProteins">0g</span> / <span id="goalGrams">--g</span>
+      </div>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="goal-stats">
+      <div class="goal-stat">
+        <div class="goal-stat-val green" id="statConsumed">0g</div>
+        <div class="goal-stat-label">Consumed</div>
+      </div>
+      <div class="goal-stat">
+        <div class="goal-stat-val purple" id="statRemaining">--g</div>
+        <div class="goal-stat-label">Remaining</div>
+      </div>
+      <div class="goal-stat">
+        <div class="goal-stat-val amber" id="statItems">0</div>
+        <div class="goal-stat-label">Food Items</div>
+      </div>
+      <div class="goal-stat">
+        <div class="goal-stat-val" id="statPct">0%</div>
+        <div class="goal-stat-label">% of Goal</div>
+      </div>
+    </div>
+    <div class="score-ring-wrap">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="32" fill="none" stroke="#2a2a38" stroke-width="6"/>
+        <circle cx="40" cy="40" r="32" fill="none" stroke="url(#ringGrad)" stroke-width="6"
+          stroke-linecap="round" stroke-dasharray="201.06"
+          stroke-dashoffset="201.06" id="scoreRingCircle"
+          transform="rotate(-90 40 40)"
+          style="transition: stroke-dashoffset 1s cubic-bezier(0.34,1.56,0.64,1)"/>
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00e5a0"/>
+            <stop offset="100%" stop-color="#7c3aed"/>
+          </linearGradient>
+        </defs>
+        <text x="40" y="36" class="score-text" id="scoreRingText">0</text>
+        <text x="40" y="52" class="score-sub">SCORE</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT: FOOD LOG -->
+    <div class="card">
+      <div class="card-title">Add Food Item</div>
+
+      <div class="quick-presets">
+        <span class="preset-chip" onclick="fillPreset('2 eggs')">🥚 2 Eggs</span>
+        <span class="preset-chip" onclick="fillPreset('100g chicken breast')">🍗 Chicken</span>
+        <span class="preset-chip" onclick="fillPreset('1 cup dal')">🫘 Dal</span>
+        <span class="preset-chip" onclick="fillPreset('200ml milk')">🥛 Milk</span>
+        <span class="preset-chip" onclick="fillPreset('100g paneer')">🧀 Paneer</span>
+        <span class="preset-chip" onclick="fillPreset('1 cup curd')">🥣 Curd</span>
+        <span class="preset-chip" onclick="fillPreset('30g whey protein')">💪 Whey</span>
+        <span class="preset-chip" onclick="fillPreset('100g tofu')">🥡 Tofu</span>
+      </div>
+
+      <div class="food-input-row">
+        <input type="text" class="food-input" id="foodInput"
+          placeholder="e.g. 2 eggs, 100g chicken, 1 cup dal..."
+          onkeydown="if(event.key==='Enter') addFood()">
+        <button class="add-btn" id="addBtn" onclick="addFood()">
+          + Add
+        </button>
+      </div>
+
+      <div class="ai-status" id="aiStatus">
+        <div class="spinner" id="spinner"></div>
+        <span id="aiStatusText">Type a food item and press Add</span>
+      </div>
+
+      <div class="card-title">Today's Log</div>
+      <div class="food-list" id="foodList">
+        <div class="empty-log">
+          <div class="empty-log-icon">🥗</div>
+          <div>No food logged yet</div>
+          <div style="margin-top:4px;font-size:0.75rem;">Start by adding a food item above</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SIDE PANEL -->
+    <div class="side-panel">
+
+      <!-- Today's Breakdown Pie -->
+      <div class="chart-card">
+        <div class="card-title">Today's Breakdown</div>
+        <div class="chart-canvas-wrap">
+          <canvas id="pieChart"></canvas>
+          <div id="pieEmpty" style="color:var(--text3);font-size:0.8rem;position:absolute;">No data yet</div>
+        </div>
+      </div>
+
+      <!-- EOD Button -->
+      <button class="eod-btn" onclick="generateReport()">
+        📊 &nbsp; Generate End-of-Day Report
+      </button>
+
+      <!-- API Setup info -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:0.68rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">How It Works</div>
+        <div style="font-size:0.78rem;color:var(--text2);line-height:1.8;">
+          🤖 AI auto-calculates protein<br>
+          🎯 Goals based on your weight<br>
+          📈 Track history day by day<br>
+          🔑 Uses OpenRouter API
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HISTORY BAR CHART -->
+  <div class="history-section">
+    <div class="card-title">7-Day Protein History</div>
+    <div class="history-chart-wrap">
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- WEIGHT MODAL -->
+<div class="modal-overlay" id="weightModal">
+  <div class="modal">
+    <div class="modal-title">YOUR WEIGHT</div>
+    <div class="modal-sub">Enter your body weight to set your personalized daily protein goal (0.8–1g per kg).</div>
+    <input type="number" class="modal-input" id="weightInput" placeholder="e.g. 75" min="30" max="200"
+      onkeydown="if(event.key==='Enter') saveWeight()">
+    <div style="font-size:0.78rem;color:var(--text3);margin-bottom:16px;">
+      Your goal: <strong style="color:var(--accent)" id="goalPreview">--</strong>
+    </div>
+    <button class="modal-save-btn" onclick="saveWeight()">Save & Set Goal</button>
+  </div>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiKeyModal">
+  <div class="modal">
+    <div class="modal-title">API KEY</div>
+    <div class="modal-sub">Enter your OpenRouter API key. It is stored only in your browser's local storage.</div>
+    <div class="api-key-notice">🔒 Your key stays on your device. It is never sent anywhere except OpenRouter's API endpoint.</div>
+    <input type="password" class="modal-input" id="apiKeyInput" placeholder="sk-or-v1-..."
+      onkeydown="if(event.key==='Enter') saveApiKey()">
+    <button class="modal-save-btn" onclick="saveApiKey()">Save Key</button>
+  </div>
+</div>
+
+<!-- EOD REPORT MODAL -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal report-modal">
+    <div class="score-display">
+      <div class="score-big" id="reportScoreBig">--</div>
+      <div class="score-grade" id="reportGrade">--</div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:16px;">Today's Report</div>
+    <div class="report-metrics">
+      <div class="metric-box">
+        <div class="metric-val" style="color:var(--accent)" id="repConsumed">0g</div>
+        <div class="metric-label">Consumed</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-val" style="color:var(--accent2)" id="repGoal">0g</div>
+        <div class="metric-label">Goal</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-val" style="color:var(--accent3)" id="repPct">0%</div>
+        <div class="metric-label">Achieved</div>
+      </div>
+    </div>
+
+    <div style="font-size:0.72rem;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Food Breakdown</div>
+    <div class="report-pie-wrap">
+      <canvas id="reportPie"></canvas>
+    </div>
+
+    <div class="report-food-list" id="reportFoodList"></div>
+
+    <div class="ai-insight" id="aiInsight">
+      <div class="ai-insight-title">🤖 AI Insight</div>
+      <div id="aiInsightText" style="color:var(--text3);font-size:0.8rem;">Generating insight...</div>
+    </div>
+
+    <button class="modal-save-btn" onclick="saveAndClose()" style="margin-top:8px;">✅ Save Day & Continue</button>
+    <button class="close-report-btn" onclick="closeModal('reportModal')">Close</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+//  STATE
+// =============================================
+let state = {
+  foods: [],       // today's foods
+  weight: null,    // kg
+  goalG: null,     // protein goal grams
+  apiKey: '',
+  history: [],     // [{date, total, goal, foods}]
+};
+
+let pieChartInst = null;
+let barChartInst = null;
+let reportPieInst = null;
+
+const FOOD_EMOJIS = {
+  egg: '🥚', chicken: '🍗', fish: '🐟', salmon: '🐟', tuna: '🐟',
+  milk: '🥛', curd: '🥣', yogurt: '🥣', paneer: '🧀', cheese: '🧀',
+  dal: '🫘', lentil: '🫘', bean: '🫘', tofu: '🥡', soy: '🫘',
+  rice: '🍚', wheat: '🌾', bread: '🍞', roti: '🫓',
+  whey: '💪', protein: '💪', shake: '🥤',
+  nuts: '🥜', peanut: '🥜', almond: '🌰',
+  meat: '🥩', beef: '🥩', mutton: '🥩', pork: '🥩',
+  prawn: '🦐', shrimp: '🦐',
+};
+
+function getFoodEmoji(name) {
+  const n = name.toLowerCase();
+  for (const [k, v] of Object.entries(FOOD_EMOJIS)) {
+    if (n.includes(k)) return v;
+  }
+  return '🍽️';
+}
+
+// =============================================
+//  INIT
+// =============================================
+function init() {
+  // Load from localStorage
+  const saved = localStorage.getItem('protrack_state');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      state.weight = s.weight || null;
+      state.goalG = s.goalG || null;
+      state.apiKey = s.apiKey || '';
+      state.history = s.history || [];
+      // Load today's foods if same date
+      const today = todayStr();
+      if (s.todayDate === today) {
+        state.foods = s.foods || [];
+      }
+    } catch(e) {}
+  }
+
+  // Set date badge
+  document.getElementById('dateBadge').textContent = new Date().toLocaleDateString('en-IN', {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+  });
+
+  // Update weight button
+  if (state.weight) {
+    document.getElementById('weightBtnText').textContent = `${state.weight} kg`;
+  }
+
+  // If no weight, open weight modal on start
+  if (!state.weight) {
+    setTimeout(() => openWeightModal(), 600);
+  } else if (!state.apiKey) {
+    setTimeout(() => openApiKeyModal(), 600);
+  }
+
+  renderFoodList();
+  updateGoalBar();
+  renderPieChart();
+  renderBarChart();
+}
+
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function saveState() {
+  localStorage.setItem('protrack_state', JSON.stringify({
+    weight: state.weight,
+    goalG: state.goalG,
+    apiKey: state.apiKey,
+    history: state.history,
+    foods: state.foods,
+    todayDate: todayStr(),
+  }));
+}
+
+// =============================================
+//  WEIGHT MODAL
+// =============================================
+function openWeightModal() {
+  if (state.weight) document.getElementById('weightInput').value = state.weight;
+  updateGoalPreview();
+  openModal('weightModal');
+  setTimeout(() => document.getElementById('weightInput').focus(), 300);
+}
+
+document.getElementById('weightInput').addEventListener('input', updateGoalPreview);
+
+function updateGoalPreview() {
+  const w = parseFloat(document.getElementById('weightInput').value);
+  if (w > 0) {
+    document.getElementById('goalPreview').textContent = `${Math.round(w * 0.8)}g – ${Math.round(w * 1.0)}g`;
+  }
+}
+
+function saveWeight() {
+  const w = parseFloat(document.getElementById('weightInput').value);
+  if (!w || w < 20 || w > 300) {
+    showToast('⚠️ Please enter a valid weight (20–300 kg)', 'error');
+    return;
+  }
+  state.weight = w;
+  state.goalG = Math.round(w * 0.9); // Use 0.9 as midpoint
+  document.getElementById('weightBtnText').textContent = `${w} kg`;
+  saveState();
+  closeModal('weightModal');
+  updateGoalBar();
+  showToast(`✅ Weight saved! Daily goal: ${state.goalG}g protein`, 'success');
+
+  if (!state.apiKey) setTimeout(() => openApiKeyModal(), 500);
+}
+
+// =============================================
+//  API KEY MODAL
+// =============================================
+function openApiKeyModal() {
+  if (state.apiKey) document.getElementById('apiKeyInput').value = state.apiKey;
+  openModal('apiKeyModal');
+  setTimeout(() => document.getElementById('apiKeyInput').focus(), 300);
+}
+
+function saveApiKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) { showToast('⚠️ Please enter your API key', 'error'); return; }
+  state.apiKey = k;
+  saveState();
+  closeModal('apiKeyModal');
+  showToast('✅ API key saved!', 'success');
+}
+
+// =============================================
+//  MODAL HELPERS
+// =============================================
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => {
+    if (e.target === el) closeModal(el.id);
+  });
+});
+
+// =============================================
+//  AI PROTEIN LOOKUP
+// =============================================
+async function getProteinFromAI(foodDesc) {
+  if (!state.apiKey) {
+    openApiKeyModal();
+    throw new Error('No API key');
+  }
+
+  const prompt = `You are a nutrition expert. Given this food item: "${foodDesc}"
+  
+Return ONLY a JSON object (no markdown, no explanation) with:
+{
+  "name": "clean food name",
+  "quantity": "quantity string",
+  "protein_g": <number>,
+  "confidence": "high/medium/low",
+  "note": "brief note about the estimate"
+}
+
+Use standard ICMR/Indian nutrition data where applicable. Be accurate. Protein in grams only.`;
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.apiKey}`,
+      'HTTP-Referer': 'https://protrack.app',
+      'X-Title': 'ProTrack Protein Tracker',
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-4o-mini',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error?.message || 'API error');
+  }
+
+  const data = await response.json();
+  const text = data.choices[0].message.content.trim();
+
+  // Parse JSON
+  const clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+// =============================================
+//  ADD FOOD
+// =============================================
+async function addFood() {
+  const input = document.getElementById('foodInput');
+  const foodDesc = input.value.trim();
+  if (!foodDesc) return;
+
+  const addBtn = document.getElementById('addBtn');
+  const spinner = document.getElementById('spinner');
+  const statusText = document.getElementById('aiStatusText');
+
+  addBtn.disabled = true;
+  spinner.classList.add('active');
+  statusText.textContent = 'Asking AI for protein data...';
+
+  try {
+    const result = await getProteinFromAI(foodDesc);
+
+    const foodItem = {
+      id: Date.now(),
+      raw: foodDesc,
+      name: result.name,
+      quantity: result.quantity,
+      protein: result.protein_g,
+      note: result.note,
+      confidence: result.confidence,
+      time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    state.foods.push(foodItem);
+    saveState();
+    input.value = '';
+    statusText.textContent = `✅ Added: ${result.name} → ${result.protein_g}g protein`;
+
+    renderFoodList();
+    updateGoalBar();
+    renderPieChart();
+    showToast(`🎯 ${result.name}: ${result.protein_g}g protein added`, 'success');
+
+  } catch(e) {
+    statusText.textContent = `❌ Error: ${e.message}`;
+    showToast(`❌ ${e.message}`, 'error');
+  } finally {
+    addBtn.disabled = false;
+    spinner.classList.remove('active');
+  }
+}
+
+function fillPreset(text) {
+  document.getElementById('foodInput').value = text;
+  document.getElementById('foodInput').focus();
+}
+
+// =============================================
+//  REMOVE FOOD
+// =============================================
+function removeFood(id) {
+  state.foods = state.foods.filter(f => f.id !== id);
+  saveState();
+  renderFoodList();
+  updateGoalBar();
+  renderPieChart();
+}
+
+// =============================================
+//  RENDER FOOD LIST
+// =============================================
+function renderFoodList() {
+  const list = document.getElementById('foodList');
+  if (state.foods.length === 0) {
+    list.innerHTML = `<div class="empty-log">
+      <div class="empty-log-icon">🥗</div>
+      <div>No food logged yet</div>
+      <div style="margin-top:4px;font-size:0.75rem;">Start by adding a food item above</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = state.foods.map(f => `
+    <div class="food-item" id="fi_${f.id}">
+      <div class="food-item-icon">${getFoodEmoji(f.name)}</div>
+      <div class="food-item-info">
+        <div class="food-item-name">${f.name}</div>
+        <div class="food-item-detail">${f.quantity} · ${f.time} · ${f.confidence} confidence</div>
+      </div>
+      <div class="food-item-protein">+${f.protein}g</div>
+      <button class="food-item-del" onclick="removeFood(${f.id})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+// =============================================
+//  GOAL BAR
+// =============================================
+function updateGoalBar() {
+  const total = state.foods.reduce((s, f) => s + f.protein, 0);
+  const goal = state.goalG;
+  const pct = goal ? Math.min(100, Math.round((total / goal) * 100)) : 0;
+  const score = computeScore(total, goal);
+
+  document.getElementById('totalProteins').textContent = `${total}g`;
+  document.getElementById('goalGrams').textContent = goal ? `${goal}g` : '--g';
+  document.getElementById('statConsumed').textContent = `${total}g`;
+  document.getElementById('statRemaining').textContent = goal ? `${Math.max(0, goal - total)}g` : '--g';
+  document.getElementById('statItems').textContent = state.foods.length;
+  document.getElementById('statPct').textContent = `${pct}%`;
+  document.getElementById('progressFill').style.width = `${pct}%`;
+
+  // Score ring
+  const circ = 201.06;
+  const offset = circ - (circ * score / 100);
+  document.getElementById('scoreRingCircle').style.strokeDashoffset = offset;
+  document.getElementById('scoreRingText').textContent = score;
+}
+
+function computeScore(total, goal) {
+  if (!goal || total === 0) return 0;
+  const pct = total / goal;
+  if (pct >= 1.0) return 100;
+  if (pct >= 0.9) return 90 + Math.round((pct - 0.9) / 0.1 * 10);
+  if (pct >= 0.7) return 70 + Math.round((pct - 0.7) / 0.2 * 20);
+  if (pct >= 0.5) return 50 + Math.round((pct - 0.5) / 0.2 * 20);
+  return Math.round(pct * 100);
+}
+
+// =============================================
+//  PIE CHART (Today)
+// =============================================
+const PIE_COLORS = [
+  '#00e5a0','#7c3aed','#f59e0b','#ef4444','#06b6d4',
+  '#8b5cf6','#10b981','#f97316','#ec4899','#84cc16'
+];
+
+function renderPieChart() {
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  const empty = document.getElementById('pieEmpty');
+
+  if (state.foods.length === 0) {
+    empty.style.display = 'block';
+    if (pieChartInst) { pieChartInst.destroy(); pieChartInst = null; }
+    return;
+  }
+  empty.style.display = 'none';
+
+  const labels = state.foods.map(f => f.name);
+  const data = state.foods.map(f => f.protein);
+
+  if (pieChartInst) pieChartInst.destroy();
+
+  pieChartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: PIE_COLORS.slice(0, data.length),
+        borderWidth: 0,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.parsed}g protein`,
+          },
+          backgroundColor: '#1c1c25',
+          borderColor: '#2a2a38',
+          borderWidth: 1,
+          titleColor: '#f0f0f8',
+          bodyColor: '#9090a8',
+        }
+      }
+    }
+  });
+}
+
+// =============================================
+//  BAR CHART (History)
+// =============================================
+function renderBarChart() {
+  const ctx = document.getElementById('barChart').getContext('2d');
+
+  // Build last 7 days
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+
+  const labels = days.map(d => {
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' });
+  });
+
+  const consumed = days.map(d => {
+    if (d === todayStr()) return state.foods.reduce((s,f) => s+f.protein, 0);
+    const h = state.history.find(h => h.date === d);
+    return h ? h.total : 0;
+  });
+
+  const goals = days.map(d => {
+    if (d === todayStr()) return state.goalG || 0;
+    const h = state.history.find(h => h.date === d);
+    return h ? h.goal : (state.goalG || 0);
+  });
+
+  if (barChartInst) barChartInst.destroy();
+
+  barChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Consumed (g)',
+          data: consumed,
+          backgroundColor: consumed.map((v, i) => {
+            const g = goals[i];
+            if (!g) return 'rgba(0,229,160,0.5)';
+            return v >= g ? 'rgba(0,229,160,0.8)' : 'rgba(124,58,237,0.7)';
+          }),
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+        {
+          label: 'Goal (g)',
+          data: goals,
+          type: 'line',
+          borderColor: 'rgba(245,158,11,0.7)',
+          borderDash: [4,4],
+          borderWidth: 2,
+          pointBackgroundColor: 'rgba(245,158,11,0.9)',
+          pointRadius: 3,
+          fill: false,
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#9090a8', font: { size: 11 }, boxWidth: 12 }
+        },
+        tooltip: {
+          backgroundColor: '#1c1c25',
+          borderColor: '#2a2a38',
+          borderWidth: 1,
+          titleColor: '#f0f0f8',
+          bodyColor: '#9090a8',
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: '#5a5a70', font: { size: 11 } },
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: '#5a5a70', font: { size: 11 } },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+}
+
+// =============================================
+//  EOD REPORT
+// =============================================
+async function generateReport() {
+  if (state.foods.length === 0) {
+    showToast('⚠️ No food logged today!', 'error');
+    return;
+  }
+
+  const total = state.foods.reduce((s, f) => s + f.protein, 0);
+  const goal = state.goalG || 80;
+  const pct = Math.round((total / goal) * 100);
+  const score = computeScore(total, goal);
+
+  // Score big
+  const scoreBig = document.getElementById('reportScoreBig');
+  scoreBig.textContent = score;
+  scoreBig.className = 'score-big';
+  if (score >= 80) scoreBig.classList.add('excellent');
+  else if (score >= 50) scoreBig.classList.add('good');
+  else scoreBig.classList.add('poor');
+
+  // Grade
+  let grade = '';
+  if (score >= 90) grade = 'EXCELLENT — PROTEIN KING 👑';
+  else if (score >= 75) grade = 'GREAT JOB — WELL DONE 💪';
+  else if (score >= 60) grade = 'GOOD EFFORT — KEEP IT UP 🎯';
+  else if (score >= 40) grade = 'NEEDS IMPROVEMENT 📈';
+  else grade = 'UNDER TARGET — TRY TOMORROW 🔄';
+  document.getElementById('reportGrade').textContent = grade;
+
+  // Metrics
+  document.getElementById('repConsumed').textContent = `${total}g`;
+  document.getElementById('repGoal').textContent = `${goal}g`;
+  document.getElementById('repPct').textContent = `${pct}%`;
+
+  // Food list
+  const foodListEl = document.getElementById('reportFoodList');
+  foodListEl.innerHTML = state.foods.map(f => `
+    <div class="report-food-row">
+      <span>${getFoodEmoji(f.name)} ${f.name} <span style="color:var(--text3);font-size:0.75rem;">(${f.quantity})</span></span>
+      <span style="color:var(--accent);font-family:var(--font-mono);font-weight:600;">${f.protein}g</span>
+    </div>
+  `).join('') + `
+    <div class="report-food-row" style="border-top:1px solid var(--accent);margin-top:4px;padding-top:8px;">
+      <span style="font-weight:600;">Total</span>
+      <span style="color:var(--accent);font-family:var(--font-mono);font-weight:700;font-size:1rem;">${total}g</span>
+    </div>
+  `;
+
+  // Report pie
+  setTimeout(() => {
+    const rctx = document.getElementById('reportPie').getContext('2d');
+    if (reportPieInst) reportPieInst.destroy();
+
+    // Goal vs consumed vs remaining
+    const remaining = Math.max(0, goal - total);
+    reportPieInst = new Chart(rctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Consumed', 'Remaining Goal'],
+        datasets: [{
+          data: [total, remaining],
+          backgroundColor: ['#00e5a0', '#2a2a38'],
+          borderWidth: 0,
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: {
+            labels: { color: '#9090a8', font: { size: 11 }, boxWidth: 10 }
+          }
+        }
+      }
+    });
+  }, 100);
+
+  openModal('reportModal');
+
+  // AI Insight
+  document.getElementById('aiInsightText').textContent = 'Generating personalized insight...';
+  generateAIInsight(total, goal, score, state.foods);
+}
+
+async function generateAIInsight(total, goal, score, foods) {
+  if (!state.apiKey) {
+    document.getElementById('aiInsightText').textContent = 'Add your API key to get AI insights.';
+    return;
+  }
+
+  const topFoods = foods.map(f => `${f.name} (${f.protein}g)`).join(', ');
+  const prompt = `You are a friendly nutritionist. Give a brief 2-3 sentence personalized insight for someone who consumed ${total}g of protein today against a goal of ${goal}g (score: ${score}/100). Foods eaten: ${topFoods}. Be encouraging, specific, and suggest one improvement. Keep it under 60 words.`;
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.apiKey}`,
+        'HTTP-Referer': 'https://protrack.app',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-4o-mini',
+        max_tokens: 120,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+      }),
+    });
+    const data = await response.json();
+    document.getElementById('aiInsightText').textContent = data.choices[0].message.content.trim();
+  } catch(e) {
+    document.getElementById('aiInsightText').textContent = 'Could not generate insight at this time.';
+  }
+}
+
+function saveAndClose() {
+  const total = state.foods.reduce((s, f) => s + f.protein, 0);
+  const goal = state.goalG || 80;
+  const today = todayStr();
+
+  // Save to history
+  state.history = state.history.filter(h => h.date !== today);
+  state.history.push({
+    date: today,
+    total,
+    goal,
+    foods: state.foods,
+    score: computeScore(total, goal),
+  });
+
+  // Clear today's foods
+  state.foods = [];
+  saveState();
+
+  closeModal('reportModal');
+  renderFoodList();
+  updateGoalBar();
+  renderPieChart();
+  renderBarChart();
+  showToast('✅ Day saved! Starting fresh.', 'success');
+}
+
+// =============================================
+//  TOAST
+// =============================================
+function showToast(msg, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// =============================================
+//  BOOT
+// =============================================
+init();
+</script>
+</body>
+</html>
